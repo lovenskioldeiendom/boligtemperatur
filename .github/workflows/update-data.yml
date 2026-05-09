@@ -1,18 +1,19 @@
 name: Oppdater boligdata
 
+# Kjører kun på schedule og manuell trigger - IKKE på push
+# Dette hindrer at vanlige kode-endringer trigger datainnhenting
 on:
   schedule:
-    # Kjør 10. hver måned kl 08:00 UTC (Eiendom Norge publiserer rundt 5.-10.)
-    - cron: '0 8 10 * *'
-  workflow_dispatch:  # Manuell kjøring
-  push:
-    branches: [main]
-    paths:
-      - 'scripts/**'
-      - '.github/workflows/update-data.yml'
+    - cron: '0 8 10 * *'  # 10. hver måned kl 08:00 UTC
+  workflow_dispatch:
 
 permissions:
   contents: write
+
+# Avbryt eventuelle samtidige kjøringer
+concurrency:
+  group: update-data
+  cancel-in-progress: false
 
 jobs:
   update:
@@ -33,7 +34,6 @@ jobs:
 
       - name: Hent boligdata fra Eiendom Norge
         run: python scripts/fetch_data.py
-        continue-on-error: true
 
       - name: Cache forrige varseltilstand
         uses: actions/cache@v4
@@ -55,6 +55,10 @@ jobs:
           DASHBOARD_URL: ${{ vars.DASHBOARD_URL }}
         continue-on-error: true
 
+      - name: Pull seneste endringer før push
+        run: |
+          git pull origin main --rebase || echo "Pull failed, proceeding"
+
       - name: Commit hvis data har endret seg
         run: |
           git config user.name "github-actions[bot]"
@@ -64,5 +68,13 @@ jobs:
             echo "Ingen endringer i data.json"
           else
             git commit -m "Oppdater boligdata $(date -u +%Y-%m-%d)"
-            git push
+            for i in 1 2 3; do
+              if git push; then
+                echo "Push ok"
+                break
+              fi
+              echo "Push feilet, prøver igjen ($i/3)..."
+              git pull origin main --rebase
+              sleep 2
+            done
           fi
