@@ -1,159 +1,129 @@
-# Boligmarked Oslo og Akershus
+# Boligmarked Oslo og Akershus — v2 (robust)
 
-Temperaturmåler for bruktboligmarkedet med automatisk månedlig oppdatering. Statisk dashboard på GitHub Pages, drevet av Eiendom Norges månedsstatistikk og GitHub Actions.
+## Hva er nytt i v2
 
-## Hva som dekkes
+Dette er den robuste versjonen som **aldri ødelegger eksisterende data**, selv hvis Eiendom Norges struktur endres eller deres servere er nede.
+
+**Tre viktige forbedringer:**
+
+1. **Smart fletting i stedet for full overskriving:** Scriptet leser eksisterende `data.json`, henter nye verdier fra Eiendom Norge, og fletter dem inn. Hvis en verdi ikke kan hentes, beholdes den eksisterende.
+
+2. **`seed_data.json` som permanent sikkerhetsnett:** Hvis ingenting kan hentes, får du fortsatt et fungerende dashboard.
+
+3. **Frontend tåler delvis data:** Mangler `bydeler` eller `segments`? Frontend bruker fornuftige defaults og viser bare det den har data for, i stedet for å kræsje.
+
+**Workflow er også tryggere:**
+
+- Kjører kun på cron og manuell trigger (ikke ved hver push av kode)
+- Pull før push for å unngå race conditions
+- Retry hvis push feiler
+
+## Oppgradering fra v1
+
+Hvis du allerede har v1 oppe og kjørende:
+
+**Filer du skal erstatte:**
+
+```
+scripts/fetch_data.py          ← bytt ut
+scripts/seed_data.json         ← NY fil (kopi av nåværende data.json)
+docs/app.js                    ← bytt ut
+.github/workflows/update-data.yml  ← bytt ut
+README.md                      ← bytt ut
+```
+
+**Filer som er uendret:**
+
+```
+docs/index.html
+docs/data/data.json
+scripts/check_alerts.py
+scripts/requirements.txt
+LICENSE
+.gitignore
+```
+
+**Steg for steg:**
+
+1. Aktivér workflow igjen hvis du har deaktivert den (Actions → Oppdater boligdata → "..." → Enable workflow)
+
+2. Erstatt de fire filene over (kopier-lim-inn på GitHub web-grensesnittet, eller via git lokalt)
+
+3. Commit endringene
+
+4. Gå til Actions-fanen → kjør "Oppdater boligdata" manuelt
+
+5. Vent 2-3 minutter, sjekk Action-loggen. Du skal se:
+   - `Lastet eksisterende data.json (9 kommuner, 15 bydeler)`
+   - `Fant N rapporter`
+   - `Ny data: X/Y verdier (Z%)`
+   - Hvis Z% er høyt: ekte ferske tall i dashboardet
+   - Hvis Z% er lavt: din eksisterende data er beholdt, dashboardet fortsetter å fungere
+
+6. Last dashboardet på nytt. Du ser nå "datakvalitet"-prosent ved siden av "Oppdatert"-stempelet.
+
+## Hvordan det fungerer
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Last eksisterende data.json (eller seed_data.json) │
+│  Inneholder ALLTID: 9 kommuner, 15 bydeler, segments│
+└──────────────────────────┬──────────────────────────┘
+                           ▼
+┌─────────────────────────────────────────────────────┐
+│  Prøv å hente fra Eiendom Norge                     │
+│  Hvis ned/timeout: behold eksisterende, avbryt      │
+└──────────────────────────┬──────────────────────────┘
+                           ▼
+┌─────────────────────────────────────────────────────┐
+│  Parse de 6 siste månedene fra Excel-filer          │
+│  Hver verdi: enten et tall, eller None              │
+└──────────────────────────┬──────────────────────────┘
+                           ▼
+┌─────────────────────────────────────────────────────┐
+│  Flett inn:                                         │
+│  - For hver måned, for hvert område, for hver serie:│
+│    Hvis ny verdi finnes → bruk den                  │
+│    Ellers → behold eksisterende verdi               │
+└──────────────────────────┬──────────────────────────┘
+                           ▼
+┌─────────────────────────────────────────────────────┐
+│  Sikkerhetssjekk:                                   │
+│  Hvis < 5% nye verdier funnet → behold ALT eksiste- │
+│  rende uendret (sannsynligvis parsing-feil)         │
+└──────────────────────────┬──────────────────────────┘
+                           ▼
+┌─────────────────────────────────────────────────────┐
+│  Skriv data.json med fetch_quality: X%              │
+│  Vises i frontend ved siden av "Oppdatert"          │
+└─────────────────────────────────────────────────────┘
+```
+
+## Det som dekkes
 
 **9 Akershus-kommuner:** Oslo, Asker, Bærum, Nordre Follo, Ås, Vestby, Frogn, Nesodden, Lørenskog
+
 **15 Oslo-bydeler:** Frogner, Grünerløkka, Sagene, St. Hanshaugen, Gamle Oslo, Nordre Aker, Vestre Aker, Ullern, Bjerke, Nordstrand, Søndre Nordstrand, Østensjø, Alna, Grorud, Stovner
+
 **3 boligtyper:** Leilighet, enebolig, rekkehus/tomannsbolig (per kommune)
 
 ## Funksjonalitet
 
 - **Tre faner:** Kommuner · Oslo bydeler · Oversikt (heatmap)
-- **Markedstemperatur** — sammenstilling av lager, salgstid og inn/ut-balanse
-- **Varselindikator** med tre nivåer (grønn/gul/rød)
-- **Tilbud vs. salg per måned** — den viktigste ledende indikatoren
+- **Markedstemperatur** med varselindikator (grønn/gul/rød)
+- **Tilbud vs. salg per måned** — den ledende indikatoren
 - **Salgstid og beholdning** over 24 måneder
-- **Prisindeks med rentemarkører** — Norges Banks beslutninger lagt på som røde/grønne/grå prikker
+- **Prisindeks med Norges Banks rentemarkører**
 - **Boligtype-fordeling** med varmeindikator per segment
-- **E-postvarsling** når et område går fra grønn til gul/rød
-- **Kommune- og bydel-sammenligning** på tvers
-- **Heatmap-oversikt** for raskt overblikk
-
-## Arkitektur
-
-```
-.
-├── scripts/
-│   ├── fetch_data.py         # Henter Eiendom Norge-rapporter, parser Excel → data.json
-│   ├── check_alerts.py       # Sammenligner med forrige kjørings tilstand, sender e-post ved forverring
-│   └── requirements.txt
-├── .github/workflows/
-│   └── update-data.yml       # Cron 10. hver måned + e-postvarsling
-└── docs/                     # GitHub Pages-rot
-    ├── index.html
-    ├── app.js
-    └── data/
-        └── data.json
-```
-
-## Komme i gang
-
-### 1. Push til GitHub
-
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git remote add origin git@github.com:DITT-BRUKERNAVN/boligdashboard.git
-git push -u origin main
-```
-
-### 2. Aktiver GitHub Pages
-
-Settings → Pages → Source: "Deploy from a branch", Branch: `main`, mappe: `/docs` → Save. Du får en URL som `https://DITT-BRUKERNAVN.github.io/boligdashboard/`.
-
-### 3. Gi Actions skrivetilgang
-
-Settings → Actions → General → Workflow permissions → "Read and write permissions". (Workflowen committer oppdatert `data.json` tilbake til repoet.)
-
-### 4. (Valgfritt) Sett opp e-postvarsling
-
-For å motta e-post når varselnivået forverres:
-
-**Settings → Secrets and variables → Actions → New repository secret:**
-
-| Navn | Verdi |
-|------|-------|
-| `SMTP_HOST` | f.eks. `smtp.gmail.com` |
-| `SMTP_PORT` | `587` |
-| `SMTP_USER` | din-konto@gmail.com |
-| `SMTP_PASS` | App-passord (ikke vanlig passord — for Gmail: lag på myaccount.google.com/apppasswords) |
-| `ALERT_TO` | mottaker@example.com |
-| `ALERT_FROM` | (valgfri, default = SMTP_USER) |
-
-**Settings → Secrets and variables → Actions → Variables → New repository variable:**
-
-| Navn | Verdi |
-|------|-------|
-| `DASHBOARD_URL` | https://DITT-BRUKERNAVN.github.io/boligdashboard/ |
-
-### 5. Kjør første scrape manuelt
-
-Actions-fanen → "Oppdater boligdata" → "Run workflow". Etter ~2 min skal `docs/data/data.json` være oppdatert med ekte tall fra Eiendom Norge.
-
-### 6. Oppdater footer-lenken
-
-I `docs/index.html`, søk etter `DITT-BRUKERNAVN` og bytt ut med ditt eget repo-navn.
-
-## Test lokalt
-
-```bash
-pip install -r scripts/requirements.txt
-python scripts/fetch_data.py
-python -m http.server 8000 --directory docs
-# Åpne http://localhost:8000
-```
-
-## Hvordan varselsystemet fungerer
-
-Etter hver månedlige kjøring vurderer `check_alerts.py` hvert område mot disse reglene:
-
-- **Rødt:** Beholdningen er > 20% over fjoråret (klart unormalt)
-- **Gult** (én eller flere av):
-  - Beholdning > 10% over fjoråret
-  - Lagt-ut overstiger solgt med > 25%
-  - Salgstiden er > 6 dager lengre enn fjoråret
-  - Prisindeksen er > 1,5% under sin høyeste i perioden
-- **Grønt:** Ingen av reglene utløst
-
-Hvis et område går fra grønt til gult/rødt, eller fra gult til rødt, sendes e-post med oppsummering. Tilstanden lagres i `.alert_state.json` mellom kjøringer (via GitHub Actions cache).
-
-## Norges Banks rentebeslutninger
-
-Listen er manuelt vedlikeholdt i `scripts/fetch_data.py` (variabel `RATE_DECISIONS`). Når en ny rentebeslutning kommer, legg til en linje:
-
-```python
-{"date": "2026-06-18", "rate": 4.00, "type": "hold"},  # eller "up" / "down"
-```
-
-Markørene vises som farget prikk på prisindeks-grafen — grønn for kutt, rød for økning, grå ring for hold.
-
-## Feilsøking
-
-**Dashboard viser "Kunne ikke laste data"**
-
-- Sjekk at GitHub Action har kjørt minst én gang (Actions-fanen)
-- Inspiser `docs/data/data.json` — har den `"error"`-felt?
-- Sjekk Pages-URL i nettleserens devtools (Network) — fetcher den `data/data.json` med 200 OK?
-
-**Action feiler under Excel-parsing**
-
-Eiendom Norge endrer av og til arkstruktur eller filnavn. `find_value_for_area` returnerer da `None` for de fleste områdene. Eksisterende `data.json` beholdes så dashboardet fortsetter å fungere. Kjør scriptet lokalt for å feilsøke:
-
-```bash
-python scripts/fetch_data.py
-```
-
-**Tall ser feil ut**
-
-Kryssjekk mot [Eiendom Norges originale rapport](https://eiendomnorge.no/boligprisstatistikk/) eller [Krogsveens prisstatistikk](https://www.krogsveen.no/prisstatistikk/) som bruker samme datakilde.
-
-**Varsel-e-poster kommer ikke**
-
-- Sjekk Actions-loggen for "SMTP-konfig mangler" — bekrefter at secrets ikke er satt riktig
-- For Gmail: bruk app-passord, ikke vanlig passord
-- Sjekk at SMTP-server tillater STARTTLS på port 587
+- **E-postvarsling** når et område forverres
+- **Datakvalitet-indikator** viser hvor mye av siste innhenting som lykkes
 
 ## Forbehold
 
-Tallene speiler riktig retning og størrelsesorden i markedet. For mindre kommuner og bydeler publiseres data med varierende granularitet; bydels-tall er typisk publisert kvartalsvis snarere enn månedlig. Boligtype-fordelingen i `app.js` (relativ salgstid og pris per type per kommune) er estimater basert på publiserte fordelinger.
-
-Dette er et personlig analyseverktøy og ikke et transaksjonsgrunnlag.
+For mindre kommuner og bydeler publiseres data med varierende granularitet i Eiendom Norges rapporter. Boligtype-fordelingen i `app.js` (relativ salgstid og pris per type per kommune) er estimater. Dashboardet er et personlig analyseverktøy, ikke et transaksjonsgrunnlag.
 
 ## Lisens og kildeangivelse
 
 - Kildekode: MIT
-- Boligdata: Eiendom Norge, FINN og Eiendomsverdi AS — viderepublisering av utdrag tillatt ved kildeangivelse, som er gjort tydelig i dashboardets footer
-- Renter: Norges Bank
+- Boligdata: Eiendom Norge, FINN og Eiendomsverdi AS — kildeangivelse i footer
+- Renter: Norges Bank (manuelt vedlikeholdt liste i `fetch_data.py`)
