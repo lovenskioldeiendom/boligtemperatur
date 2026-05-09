@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boligmarked Oslo og Akershus</title>
+<style>
+:root {
+  --bg: #faf9f6;
+  --surface: #ffffff;
+  --surface-2: #f1efe8;
+  --surface-3: #e8e6df;
+  --border: rgba(0,0,0,0.1);
+  --text: #1a1a1a;
+  --text-muted: #5f5e5a;
+  --text-dim: #888780;
+  --info-bg: #e6f1fb;
+  --info-text: #042c53;
+  --info-border: #185fa5;
+  --warn-bg: #faeeda;
+  --warn-text: #412402;
+  --warn-border: #ba7517;
+  --danger-bg: #fcebeb;
+  --danger-text: #501313;
+  --danger-border: #a32d2d;
+  --success-bg: #eaf3de;
+  --success-text: #173404;
+  --success-border: #3b6d11;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1a1a;
+    --surface: #242422;
+    --surface-2: #2c2c2a;
+    --surface-3: #353532;
+    --border: rgba(255,255,255,0.12);
+    --text: #f1efe8;
+    --text-muted: #b4b2a9;
+    --text-dim: #888780;
+    --info-bg: #042c53;
+    --info-text: #b5d4f4;
+    --warn-bg: #412402;
+    --warn-text: #fac775;
+    --danger-bg: #501313;
+    --danger-text: #f7c1c1;
+    --success-bg: #173404;
+    --success-text: #c0dd97;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  margin: 0;
+  padding: 24px 16px;
+  line-height: 1.5;
+}
+.container { max-width: 880px; margin: 0 auto; }
+h1 { font-size: 22px; font-weight: 500; margin: 0 0 4px; }
+h2 { font-size: 18px; font-weight: 500; margin: 0; }
+h3 { font-size: 16px; font-weight: 500; margin: 0; }
+.subtitle { font-size: 13px; color: var(--text-muted); margin: 0 0 20px; }
+.tabs { display: flex; gap: 4px; margin-bottom: 16px; padding: 4px; background: var(--surface-2); border-radius: 10px; }
+.tab {
+  flex: 1; padding: 8px 12px; border: 0; background: transparent;
+  color: var(--text-muted); font-size: 13px; font-weight: 500;
+  border-radius: 8px; cursor: pointer; font-family: inherit;
+}
+.tab.active { background: var(--surface); color: var(--text); }
+.controls { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+.controls label { font-size: 13px; color: var(--text-muted); }
+select {
+  background: var(--surface); color: var(--text);
+  border: 0.5px solid var(--border); border-radius: 8px;
+  padding: 6px 10px; font-size: 13px; font-family: inherit;
+}
+.card {
+  background: var(--surface); border: 0.5px solid var(--border);
+  border-radius: 12px; padding: 16px 20px; margin-bottom: 16px;
+}
+.card-muted { background: var(--surface-2); border: none; padding: 14px 16px; }
+.card-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+.card-meta { font-size: 11px; color: var(--text-dim); }
+.card-desc { font-size: 12px; color: var(--text-muted); margin: 0 0 12px; }
+.kpi-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px; margin-bottom: 16px;
+}
+.kpi { background: var(--surface-2); border-radius: 8px; padding: 14px; }
+.kpi-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+.kpi-value { font-size: 24px; font-weight: 500; }
+.kpi-trend { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 8px; font-size: 12px; color: var(--text-muted); }
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-swatch { width: 10px; height: 10px; border-radius: 2px; }
+.legend-line { width: 16px; height: 2px; }
+.legend-marker {
+  width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--text-muted);
+}
+.chart-wrap { position: relative; width: 100%; }
+.chart-wrap.h220 { height: 220px; }
+.chart-wrap.h240 { height: 240px; }
+.chart-wrap.h280 { height: 280px; }
+.alert { display: flex; gap: 12px; padding: 12px 16px; border-radius: 12px; margin-bottom: 16px; align-items: flex-start; }
+.alert-icon { font-size: 20px; flex-shrink: 0; line-height: 1.2; }
+.alert-title { font-weight: 500; font-size: 14px; margin-bottom: 2px; }
+.alert-text { font-size: 13px; line-height: 1.5; }
+.alert.danger { background: var(--danger-bg); color: var(--danger-text); border: 0.5px solid var(--danger-border); }
+.alert.warning { background: var(--warn-bg); color: var(--warn-text); border: 0.5px solid var(--warn-border); }
+.alert.success { background: var(--success-bg); color: var(--success-text); border: 0.5px solid var(--success-border); }
+.temp-bar {
+  position: relative; height: 10px; background: var(--surface-3);
+  border-radius: 5px; overflow: hidden; margin: 8px 0 6px;
+}
+.temp-fill {
+  position: absolute; inset: 0;
+  background: linear-gradient(to right, #378ADD 0%, #1D9E75 35%, #EF9F27 65%, #E24B4A 100%);
+  opacity: 0.85;
+}
+.temp-marker {
+  position: absolute; top: -3px; width: 3px; height: 16px;
+  background: var(--text); border-radius: 2px; transition: left 0.4s;
+}
+.temp-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); }
+.temp-header { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-muted); }
+.temp-header strong { color: var(--text); font-weight: 500; }
+.segment-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+.segment-card { background: var(--surface-2); border-radius: 8px; padding: 12px; }
+.segment-card.active { outline: 2px solid var(--info-border); }
+.segment-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.segment-name { font-size: 13px; font-weight: 500; }
+.segment-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+.segment-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.segment-row span:last-child { color: var(--text); }
+.interp { font-size: 14px; line-height: 1.7; }
+.interp ul { margin: 0; padding-left: 18px; }
+.interp li { margin-bottom: 6px; }
+.heatmap {
+  display: grid; grid-template-columns: 1fr auto auto auto; gap: 6px 14px;
+  font-size: 13px; align-items: center;
+}
+.heatmap-cell {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 60px; padding: 4px 0; border-radius: 6px; font-weight: 500; font-size: 12px;
+}
+.heatmap-name { color: var(--text); }
+.heatmap-name.bydel { padding-left: 12px; color: var(--text-muted); }
+.heatmap-header { font-size: 11px; color: var(--text-dim); font-weight: 500; text-align: center; }
+.footer {
+  font-size: 11px; color: var(--text-dim); margin-top: 24px;
+  padding-top: 16px; border-top: 0.5px solid var(--border);
+}
+.footer a { color: var(--text-muted); }
+.error-banner {
+  background: var(--warn-bg); color: var(--warn-text);
+  border: 0.5px solid var(--warn-border); border-radius: 12px;
+  padding: 12px 16px; margin-bottom: 16px; font-size: 13px; display: none;
+}
+.loading { text-align: center; padding: 40px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+<div class="container">
+  <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom: 4px; flex-wrap: wrap; gap: 8px;">
+    <h1>Boligmarkedet — Oslo og Akershus</h1>
+    <span class="card-meta" id="data-stamp">Laster…</span>
+  </div>
+  <p class="subtitle">Temperaturmåler basert på Eiendom Norges månedsstatistikk (FINN / Eiendomsverdi).</p>
+
+  <div id="error-banner" class="error-banner"></div>
+
+  <div class="tabs">
+    <button class="tab active" id="tab-kommune" onclick="setTab('kommune')">Kommuner</button>
+    <button class="tab" id="tab-bydel" onclick="setTab('bydel')">Oslo bydeler</button>
+    <button class="tab" id="tab-overview" onclick="setTab('overview')">Oversikt</button>
+  </div>
+
+  <div id="main-content" style="display:none;">
+
+    <!-- Vanlig kommune/bydel-detalj -->
+    <div id="detail-view">
+      <div class="controls">
+        <label>Område:</label>
+        <select id="region"></select>
+        <label style="margin-left: 12px;" id="segment-label">Boligtype:</label>
+        <select id="segment">
+          <option value="all">Alle</option>
+          <option value="apt">Leilighet</option>
+          <option value="house">Enebolig</option>
+          <option value="row">Rekkehus / tomannsbolig</option>
+        </select>
+      </div>
+
+      <div id="alert" class="alert success">
+        <span class="alert-icon" id="alert-icon">✓</span>
+        <div style="flex:1;">
+          <div class="alert-title" id="alert-title"></div>
+          <div class="alert-text" id="alert-text"></div>
+        </div>
+      </div>
+
+      <div class="card-muted" style="border-radius: 12px; margin-bottom: 16px;">
+        <div class="temp-header">
+          <span>Markedstemperatur</span>
+          <strong id="temp-label">—</strong>
+        </div>
+        <div class="temp-bar">
+          <div class="temp-fill"></div>
+          <div class="temp-marker" id="temp-marker" style="left:50%;"></div>
+        </div>
+        <div class="temp-labels">
+          <span>Kjøpers marked</span><span>Balansert</span><span>Selgers marked</span>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-label">Boliger til salgs</div><div class="kpi-value" id="kpi-stock">—</div><div class="kpi-trend" id="kpi-stock-trend"></div></div>
+        <div class="kpi"><div class="kpi-label">Salgstid</div><div class="kpi-value" id="kpi-days">—</div><div class="kpi-trend" id="kpi-days-trend"></div></div>
+        <div class="kpi"><div class="kpi-label">Solgt sist måned</div><div class="kpi-value" id="kpi-sold">—</div><div class="kpi-trend" id="kpi-sold-trend"></div></div>
+        <div class="kpi"><div class="kpi-label">Prisindeks</div><div class="kpi-value" id="kpi-price">—</div><div class="kpi-trend" id="kpi-price-trend"></div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3>Tilbud vs. salg per måned</h3><span class="card-meta">Siste 12 mnd</span></div>
+        <p class="card-desc">Når blå overstiger grønn, vokser beholdningen.</p>
+        <div class="legend">
+          <span class="legend-item"><span class="legend-swatch" style="background:#378ADD"></span>Lagt ut</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:#1D9E75"></span>Solgt</span>
+        </div>
+        <div class="chart-wrap h220"><canvas id="chart-flow" role="img" aria-label="Søylediagram tilbud mot salg"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3>Salgstid og beholdning</h3><span class="card-meta">24 mnd</span></div>
+        <p class="card-desc">Begge stiger samtidig = avkjøling.</p>
+        <div class="legend">
+          <span class="legend-item"><span class="legend-line" style="background:#D85A30"></span>Salgstid (dager)</span>
+          <span class="legend-item"><span class="legend-line" style="border-top: 2px dashed #534AB7; height: 0;"></span>Beholdning</span>
+        </div>
+        <div class="chart-wrap h240"><canvas id="chart-trend" role="img" aria-label="Linjediagram salgstid og beholdning"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3>Prisutvikling med rentebeslutninger</h3><span class="card-meta">Indeks</span></div>
+        <p class="card-desc">Markører viser Norges Banks rentebeslutninger.</p>
+        <div class="legend">
+          <span class="legend-item"><span class="legend-line" style="background:#185FA5"></span>Valgt område</span>
+          <span class="legend-item"><span class="legend-line" style="border-top: 2px dashed #888780; height: 0;"></span>Oslo</span>
+          <span class="legend-item"><span class="legend-marker" style="background:#1D9E75; border-color:#0F6E56;"></span>Rentekutt</span>
+          <span class="legend-item"><span class="legend-marker" style="background:#E24B4A; border-color:#A32D2D;"></span>Renteøkning</span>
+          <span class="legend-item"><span class="legend-marker" style="background:transparent; border-color:#888780;"></span>Hold</span>
+        </div>
+        <div class="chart-wrap h280"><canvas id="chart-price" role="img" aria-label="Prisindeks med rentebeslutninger"></canvas></div>
+      </div>
+
+      <div class="card" id="segment-card-block">
+        <h3 style="margin-bottom: 4px;">Boligtype-fordeling</h3>
+        <p class="card-desc">Hvor sterkt er hvert segment akkurat nå?</p>
+        <div class="segment-grid" id="segment-grid"></div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom: 4px;">Sammenligning</h3>
+        <p class="card-desc" id="comparison-desc">Salgstid sist måned — kortere er varmere.</p>
+        <div class="chart-wrap h280"><canvas id="chart-regions" role="img" aria-label="Stolpediagram salgstid"></canvas></div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom: 12px;">Tolkning av temperaturen nå</h3>
+        <div class="interp" id="interpretation"></div>
+      </div>
+    </div>
+
+    <!-- Oversikts-fanen -->
+    <div id="overview-view" style="display:none;">
+      <p class="card-desc" style="margin-bottom: 16px;">Heatmap av varselnivå på alle områder. Klikk på et område for å se detaljer.</p>
+
+      <div class="card">
+        <h3 style="margin-bottom: 4px;">Akershus-kommuner</h3>
+        <p class="card-desc">Status nå · 12-mnd prisendring · salgstid · varselnivå.</p>
+        <div class="heatmap" id="heatmap-kommuner"></div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom: 4px;">Oslo bydeler</h3>
+        <p class="card-desc">Status nå · 12-mnd prisendring · salgstid · varselnivå.</p>
+        <div class="heatmap" id="heatmap-bydeler"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading" id="loading">Laster boligdata…</div>
+
+  <div class="footer">
+    <p style="margin: 0 0 6px;">
+      Kilde: <a href="https://eiendomnorge.no/boligprisstatistikk/">Eiendom Norge</a>
+      · FINN · Eiendomsverdi AS. Renter: Norges Bank.
+      Tall hentes automatisk fra Eiendom Norges månedsrapporter.
+    </p>
+    <p style="margin: 0;">
+      Viderepublisering av utdrag tillatt ved kildeangivelse.
+      Personlig analyseverktøy, ikke transaksjonsgrunnlag.
+      <a href="https://github.com/DITT-BRUKERNAVN/boligdashboard">Kildekode</a>.
+    </p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
