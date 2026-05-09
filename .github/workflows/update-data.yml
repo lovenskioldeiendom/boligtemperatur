@@ -1,0 +1,68 @@
+name: Oppdater boligdata
+
+on:
+  schedule:
+    # Kjør 10. hver måned kl 08:00 UTC (Eiendom Norge publiserer rundt 5.-10.)
+    - cron: '0 8 10 * *'
+  workflow_dispatch:  # Manuell kjøring
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/**'
+      - '.github/workflows/update-data.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: scripts/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Hent boligdata fra Eiendom Norge
+        run: python scripts/fetch_data.py
+        continue-on-error: true
+
+      - name: Cache forrige varseltilstand
+        uses: actions/cache@v4
+        with:
+          path: .alert_state.json
+          key: alert-state-${{ github.run_id }}
+          restore-keys: |
+            alert-state-
+
+      - name: Sjekk varsler og send e-post
+        run: python scripts/check_alerts.py
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          ALERT_TO:  ${{ secrets.ALERT_TO }}
+          ALERT_FROM: ${{ secrets.ALERT_FROM }}
+          DASHBOARD_URL: ${{ vars.DASHBOARD_URL }}
+        continue-on-error: true
+
+      - name: Commit hvis data har endret seg
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/data/data.json
+          if git diff --staged --quiet; then
+            echo "Ingen endringer i data.json"
+          else
+            git commit -m "Oppdater boligdata $(date -u +%Y-%m-%d)"
+            git push
+          fi
