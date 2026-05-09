@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-09T08:00:00+00:00",
+  "generated_at": "2026-05-09T18:25:31.964941+00:00",
   "source": "Eiendom Norge / FINN / Eiendomsverdi AS",
   "source_url": "https://eiendomnorge.no/boligprisstatistikk/statistikkbank/rapporter/manedsrapporter/",
   "license_note": "Tall fra Eiendom Norge. Viderepublisering av utdrag tillatt ved angivelse av kilde. Initielle verdier — vil oppdateres automatisk månedlig av GitHub Actions.",
@@ -3407,5 +3407,6 @@
       "rate": 4.0,
       "type": "hold"
     }
-  ]
+  ],
+  "fetch_quality": 0.0
 }
