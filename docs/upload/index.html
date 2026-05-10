@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oppdater boligdata</title>
+<style>
+:root {
+  --bg: #faf9f6;
+  --surface: #ffffff;
+  --surface-2: #f1efe8;
+  --surface-3: #e8e6df;
+  --border: rgba(0,0,0,0.1);
+  --text: #1a1a1a;
+  --text-muted: #5f5e5a;
+  --text-dim: #888780;
+  --info-bg: #e6f1fb;
+  --info-text: #042c53;
+  --info-border: #185fa5;
+  --warn-bg: #faeeda;
+  --warn-text: #412402;
+  --warn-border: #ba7517;
+  --danger-bg: #fcebeb;
+  --danger-text: #501313;
+  --danger-border: #a32d2d;
+  --success-bg: #eaf3de;
+  --success-text: #173404;
+  --success-border: #3b6d11;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1a1a;
+    --surface: #242422;
+    --surface-2: #2c2c2a;
+    --surface-3: #353532;
+    --border: rgba(255,255,255,0.12);
+    --text: #f1efe8;
+    --text-muted: #b4b2a9;
+    --text-dim: #888780;
+    --info-bg: #042c53;
+    --info-text: #b5d4f4;
+    --warn-bg: #412402;
+    --warn-text: #fac775;
+    --danger-bg: #501313;
+    --danger-text: #f7c1c1;
+    --success-bg: #173404;
+    --success-text: #c0dd97;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  background: var(--bg); color: var(--text);
+  margin: 0; padding: 24px 16px; line-height: 1.5;
+}
+.container { max-width: 880px; margin: 0 auto; }
+h1 { font-size: 22px; font-weight: 500; margin: 0 0 4px; }
+h2 { font-size: 18px; font-weight: 500; margin: 0; }
+h3 { font-size: 16px; font-weight: 500; margin: 0; }
+.subtitle { font-size: 13px; color: var(--text-muted); margin: 0 0 24px; }
+.steps {
+  display: grid; gap: 12px; margin-bottom: 24px;
+}
+.step {
+  background: var(--surface-2); border-radius: 8px; padding: 14px 18px;
+  display: flex; gap: 12px; align-items: flex-start;
+}
+.step-num {
+  display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--info-bg); color: var(--info-text);
+  font-size: 13px; font-weight: 500; flex-shrink: 0;
+}
+.step-text { font-size: 14px; }
+.step-text a { color: var(--info-text); }
+.step-text strong { font-weight: 500; }
+
+.dropzone {
+  border: 2px dashed var(--border); border-radius: 12px;
+  padding: 40px; text-align: center; transition: all 0.2s;
+  background: var(--surface); margin-bottom: 16px;
+}
+.dropzone.drag-over {
+  border-color: var(--info-border); background: var(--info-bg);
+}
+.dropzone-icon { font-size: 32px; margin-bottom: 8px; }
+.dropzone-text { font-size: 14px; color: var(--text-muted); }
+.dropzone input[type=file] { display: none; }
+.dropzone-button {
+  display: inline-block; margin-top: 12px;
+  background: transparent; color: var(--text);
+  border: 0.5px solid var(--border); border-radius: 8px;
+  padding: 8px 16px; cursor: pointer; font-family: inherit; font-size: 13px;
+}
+.dropzone-button:hover { background: var(--surface-2); }
+
+.file-list {
+  background: var(--surface); border: 0.5px solid var(--border);
+  border-radius: 12px; padding: 4px; margin-bottom: 16px;
+}
+.file-row {
+  display: grid; grid-template-columns: auto 1fr auto auto;
+  gap: 12px; padding: 10px 14px; align-items: center;
+  border-bottom: 0.5px solid var(--border);
+  font-size: 13px;
+}
+.file-row:last-child { border-bottom: none; }
+.file-icon { font-size: 16px; }
+.file-icon.match { color: var(--success-border); }
+.file-icon.unmatched { color: var(--text-dim); }
+.file-name { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-type {
+  font-size: 12px; color: var(--text-muted);
+  background: var(--surface-2); padding: 2px 8px; border-radius: 4px;
+}
+.file-remove {
+  cursor: pointer; color: var(--text-dim); border: none;
+  background: transparent; font-size: 16px; padding: 0 4px;
+}
+.file-remove:hover { color: var(--danger-text); }
+
+.month-picker {
+  background: var(--surface); border: 0.5px solid var(--border);
+  border-radius: 12px; padding: 16px 20px; margin-bottom: 16px;
+}
+.month-picker label { font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 8px; }
+.month-picker input {
+  background: var(--surface-2); color: var(--text);
+  border: 0.5px solid var(--border); border-radius: 8px;
+  padding: 8px 12px; font-size: 14px; font-family: inherit;
+  width: 200px;
+}
+
+.btn {
+  background: var(--info-border); color: white; border: none;
+  border-radius: 8px; padding: 12px 24px; cursor: pointer;
+  font-family: inherit; font-size: 14px; font-weight: 500;
+  width: 100%; margin-bottom: 16px;
+}
+.btn:hover { opacity: 0.9; }
+.btn:disabled { background: var(--text-dim); cursor: not-allowed; }
+.btn-secondary {
+  background: transparent; color: var(--text);
+  border: 0.5px solid var(--border);
+}
+.btn-secondary:hover { background: var(--surface-2); }
+
+.preview {
+  background: var(--surface); border: 0.5px solid var(--border);
+  border-radius: 12px; padding: 16px 20px; margin-bottom: 16px;
+}
+.preview-row {
+  display: grid; grid-template-columns: 1fr auto auto auto auto auto;
+  gap: 12px; padding: 6px 0; font-size: 12px;
+  border-bottom: 0.5px solid var(--border);
+}
+.preview-row:last-child { border-bottom: none; }
+.preview-row.header {
+  font-weight: 500; color: var(--text-muted); font-size: 11px;
+  text-transform: uppercase; padding-bottom: 8px;
+}
+.preview-cell { text-align: right; }
+.preview-cell.found { color: var(--success-border); }
+.preview-cell.missing { color: var(--text-dim); }
+.preview-cell.name { text-align: left; }
+
+.status {
+  display: flex; gap: 12px; padding: 12px 16px; border-radius: 12px;
+  margin-bottom: 16px; align-items: flex-start; font-size: 13px;
+}
+.status.info { background: var(--info-bg); color: var(--info-text); border: 0.5px solid var(--info-border); }
+.status.success { background: var(--success-bg); color: var(--success-text); border: 0.5px solid var(--success-border); }
+.status.warning { background: var(--warn-bg); color: var(--warn-text); border: 0.5px solid var(--warn-border); }
+.status.danger { background: var(--danger-bg); color: var(--danger-text); border: 0.5px solid var(--danger-border); }
+
+details { background: var(--surface-2); border-radius: 8px; padding: 8px 14px; margin-bottom: 16px; }
+details summary { cursor: pointer; font-size: 13px; color: var(--text-muted); }
+details[open] summary { margin-bottom: 8px; }
+.log {
+  font-family: ui-monospace, monospace; font-size: 11px;
+  color: var(--text-muted); white-space: pre-wrap; line-height: 1.6;
+  max-height: 300px; overflow-y: auto;
+}
+.footer {
+  font-size: 11px; color: var(--text-dim); margin-top: 24px;
+  padding-top: 16px; border-top: 0.5px solid var(--border);
+}
+.footer a { color: var(--text-muted); }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Oppdater boligdata</h1>
+  <p class="subtitle">Last opp Excel-filer fra Eiendom Norges siste månedsrapport for å oppdatere dashboardet.</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text">
+        Gå til <a href="https://eiendomnorge.no/boligprisstatistikk/statistikkbank/rapporter/manedsrapporter/" target="_blank">Eiendom Norges månedsrapporter</a> og åpne siste rapport.
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text">
+        Last ned <strong>5 Excel-filer</strong>:
+        Volum (Solgte), Lagt ut for salg, Usolgte, Omsetningstid, Geografisk vedlegg.
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-text">
+        Dra alle 5 filene inn under, eller klikk for å velge dem.
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-text">
+        Klikk <strong>"Generer data.json"</strong>, last ned filen, og last den opp til <code>docs/data/data.json</code> på GitHub.
+      </div>
+    </div>
+  </div>
+
+  <div class="month-picker">
+    <label>Hvilken måned er rapporten for?</label>
+    <input type="month" id="report-month" />
+  </div>
+
+  <div class="dropzone" id="dropzone">
+    <div class="dropzone-icon">📁</div>
+    <div class="dropzone-text">Dra Excel-filene hit</div>
+    <button class="dropzone-button" type="button" onclick="document.getElementById('file-input').click()">
+      eller velg filer
+    </button>
+    <input type="file" id="file-input" multiple accept=".xlsx,.xls" />
+  </div>
+
+  <div id="file-list" class="file-list" style="display: none;"></div>
+
+  <div id="status-container"></div>
+
+  <button class="btn" id="parse-btn" disabled>Generer data.json</button>
+
+  <div id="preview-container"></div>
+
+  <details id="log-container" style="display: none;">
+    <summary>Detaljert logg</summary>
+    <div class="log" id="log"></div>
+  </details>
+
+  <button class="btn btn-secondary" id="download-btn" style="display: none;">Last ned data.json</button>
+
+  <div class="footer">
+    <p style="margin: 0;">
+      Verktøy som kjører i din nettleser. Ingen data sendes noe sted.
+      Bygget for <a href="../">boligdashboard</a>. Kilde: Eiendom Norge.
+    </p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="upload.js"></script>
+</body>
+</html>
