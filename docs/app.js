@@ -247,7 +247,11 @@ function render() {
   document.getElementById('alert-title').textContent = alert.title;
   document.getElementById('alert-text').textContent = alert.text;
 
-  document.getElementById('temp-marker').style.left = (t.score * 100) + '%';
+  // Speedometer - score er 0-1, vi viser den som 0-100 og roterer visermåleren
+  const speedScore = Math.round(t.score * 100);
+  const angle = -90 + t.score * 180;
+  document.getElementById('speed-needle').style.transform = `rotate(${angle}deg)`;
+  document.getElementById('speed-num').textContent = speedScore;
   document.getElementById('temp-label').textContent = t.label;
 
   document.getElementById('kpi-stock').textContent = fmt(t.stockNow);
@@ -330,6 +334,13 @@ function renderCharts(area, regionKey) {
   const months = DATA.months || [];
   const recent = months.slice(-12);
 
+  // Tema-tilpasset akse-styling for bedre lesbarhet
+  const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+  const tickColor = isDark ? '#b4b2a9' : '#5f5e5a';
+  const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+  const tickFont = { size: 12, weight: '500' };
+  const compactNum = v => v >= 1000 ? (v/1000).toFixed(1).replace('.0','') + 'k' : v;
+
   charts.flow = new Chart(document.getElementById('chart-flow'), {
     type: 'bar',
     data: { labels: recent, datasets: [
@@ -337,22 +348,24 @@ function renderCharts(area, regionKey) {
       { label: 'Solgt',   data: area.series.sold.slice(-12),   backgroundColor: '#1D9E75' }
     ]},
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-      scales: { x: { ticks: { autoSkip: false, maxRotation: 0, font: { size: 10 } }, grid: { display: false } },
-                y: { beginAtZero: true, ticks: { font: { size: 10 } } } } }
+      scales: {
+        x: { ticks: { autoSkip: false, maxRotation: 0, font: tickFont, color: tickColor }, grid: { display: false }, border: { color: gridColor } },
+        y: { beginAtZero: true, ticks: { font: tickFont, color: tickColor, callback: compactNum }, grid: { color: gridColor, drawTicks: false }, border: { display: false } }
+      } }
   });
 
   charts.trend = new Chart(document.getElementById('chart-trend'), {
     type: 'line',
     data: { labels: months, datasets: [
-      { label: 'Salgstid', data: area.series.days, borderColor: '#D85A30', backgroundColor: '#D85A30', yAxisID: 'y', tension: 0.3, pointRadius: 1.5, borderWidth: 2 },
-      { label: 'Beholdning', data: area.series.stock, borderColor: '#534AB7', backgroundColor: '#534AB7', yAxisID: 'y1', tension: 0.3, pointRadius: 1.5, borderWidth: 2, borderDash: [5, 4] }
+      { label: 'Salgstid', data: area.series.days, borderColor: '#D85A30', backgroundColor: '#D85A30', yAxisID: 'y', tension: 0.3, pointRadius: 1.5, borderWidth: 2.5 },
+      { label: 'Beholdning', data: area.series.stock, borderColor: '#534AB7', backgroundColor: '#534AB7', yAxisID: 'y1', tension: 0.3, pointRadius: 1.5, borderWidth: 2.5, borderDash: [5, 4] }
     ]},
     options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
       plugins: { legend: { display: false } },
       scales: {
-        x: { ticks: { font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
-        y: { type: 'linear', position: 'left', ticks: { font: { size: 10 }, callback: v => v + ' d' } },
-        y1: { type: 'linear', position: 'right', ticks: { font: { size: 10 }, callback: v => fmt(v) }, grid: { drawOnChartArea: false } }
+        x: { ticks: { font: tickFont, color: tickColor, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false }, border: { color: gridColor } },
+        y: { type: 'linear', position: 'left', ticks: { font: tickFont, color: tickColor, callback: v => v + ' d' }, grid: { color: gridColor, drawTicks: false }, border: { display: false } },
+        y1: { type: 'linear', position: 'right', ticks: { font: tickFont, color: tickColor, callback: compactNum }, grid: { drawOnChartArea: false }, border: { display: false } }
       } }
   });
 
@@ -380,8 +393,8 @@ function renderCharts(area, regionKey) {
         }
       } } },
       scales: {
-        x: { ticks: { font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
-        y: { ticks: { font: { size: 10 } } }
+        x: { ticks: { font: tickFont, color: tickColor, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false }, border: { color: gridColor } },
+        y: { ticks: { font: tickFont, color: tickColor }, grid: { color: gridColor, drawTicks: false }, border: { display: false } }
       } }
   });
 
@@ -397,8 +410,8 @@ function renderCharts(area, regionKey) {
     options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y',
       plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.parsed.x + ' dager' } } },
       scales: {
-        x: { beginAtZero: true, ticks: { font: { size: 10 }, callback: v => v + ' d' } },
-        y: { ticks: { font: { size: 11 } }, grid: { display: false } }
+        x: { beginAtZero: true, ticks: { font: tickFont, color: tickColor, callback: v => v + ' d' }, grid: { color: gridColor, drawTicks: false }, border: { display: false } },
+        y: { ticks: { font: { size: 12, weight: '500' }, color: tickColor }, grid: { display: false }, border: { color: gridColor } }
       } }
   });
 }
