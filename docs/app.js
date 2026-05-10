@@ -250,9 +250,12 @@ function render() {
   // Speedometer - score er 0-1, vi viser den som 0-100 og roterer visermåleren
   const speedScore = Math.round(t.score * 100);
   const angle = -90 + t.score * 180;
-  document.getElementById('speed-needle').style.transform = `rotate(${angle}deg)`;
-  document.getElementById('speed-num').textContent = speedScore;
-  document.getElementById('temp-label').textContent = t.label;
+  const needle = document.getElementById('speed-needle');
+  if (needle) needle.style.transform = `rotate(${angle}deg)`;
+  const speedNum = document.getElementById('speed-num');
+  if (speedNum) speedNum.textContent = speedScore;
+  const tempLabel = document.getElementById('temp-label');
+  if (tempLabel) tempLabel.textContent = t.label;
 
   document.getElementById('kpi-stock').textContent = fmt(t.stockNow);
   document.getElementById('kpi-stock-trend').textContent = t.stockDelta !== null
@@ -448,11 +451,12 @@ function buildRateMarkers(months, priceIdx) {
 // --- Oversikt heatmap ---
 function renderOverview() {
   renderHeatmap('heatmap-kommuner', DATA.kommuner);
+  const bydelerCard = document.getElementById('heatmap-bydeler')?.closest('.card');
   if (Object.keys(DATA.bydeler).length > 0) {
-    document.querySelector('#overview-view .card:nth-child(3)').style.display = '';
+    if (bydelerCard) bydelerCard.style.display = '';
     renderHeatmap('heatmap-bydeler', DATA.bydeler, true);
   } else {
-    document.querySelector('#overview-view .card:nth-child(3)').style.display = 'none';
+    if (bydelerCard) bydelerCard.style.display = 'none';
   }
 }
 
@@ -552,7 +556,13 @@ async function init() {
     document.getElementById('main-content').style.display = '';
     document.getElementById('region').addEventListener('change', render);
     document.getElementById('segment').addEventListener('change', render);
-    render();
+
+    try {
+      render();
+    } catch (renderErr) {
+      console.error('Render-feil:', renderErr);
+      showWarning(`Visning feilet: ${renderErr.message}. Prøv å bytte område eller last på nytt.`);
+    }
   } catch (err) {
     document.getElementById('loading').style.display = 'none';
     showError(`Klarte ikke å laste boligdata: ${err.message}.`);
